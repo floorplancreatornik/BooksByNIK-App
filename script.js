@@ -1,55 +1,104 @@
 // =======================================================
-// 1. GLOBAL STATE AND HELPER FUNCTIONS
+// 1. GLOBAL STATE AND HELPER DATA
 // =======================================================
 
-const APP_SCREENS = ['home-screen', 'cart-screen', 'profile-screen', 'book-details-screen', 'checkout-screen', 'thank-you-screen'];
+// All possible screens that need managing, primarily on home.html and checkout.html
+const APP_SCREENS = [
+    'home-screen', 'cart-screen', 'profile-screen', 
+    'book-details-screen', 'checkout-screen', 'thank-you-screen',
+    'login-screen' // Included for completeness but managed by index.html load
+];
 
-// Data structure to simulate cart items
-let cart = JSON.parse(localStorage.getItem('cart')) || []; 
-let bookData = [
-    {id: 'WOH001', title: 'ഹൃദയത്തിന്റെ മന്ത്രണങ്ങൾ', price: 299, author: 'NIK', category: 'Poetry', lang: 'ml'},
+// Data structure to simulate book list and cart items
+const bookData = [
+    {id: 'WOH001', title: 'ഹൃദയത്തിന്റെ മന്ത്രണങ്ങൾ', price: 299, author: 'NIK', category: 'Poetry', lang: 'ml', description: 'ആത്മാവിൻ്റെ സ്പർശമുള്ള പ്രണയ കവിതകളുടെ സമാഹാരം.'},
+    {id: 'ADVE002', title: 'സഹ്യാദ്രിയിലെ നിഴലുകൾ', price: 450, author: 'NIK', category: 'Adventure', lang: 'ml', description: 'സഹ്യപർവത നിരകളിലൂടെയുള്ള ഒരു സാഹസിക യാത്ര.'},
     // Add more book objects here as needed
 ];
 
-// Helper to get the current page name
+let cart = JSON.parse(localStorage.getItem('cart')) || []; 
+
+// =======================================================
+// 2. PAGE CONTEXT AND INITIALIZATION
+// =======================================================
+
+/**
+ * Determines which HTML page the script is currently running on.
+ * @returns {'index' | 'home' | 'checkout'}
+ */
 function getCurrentPage() {
     const path = window.location.pathname;
     if (path.includes('checkout.html')) return 'checkout';
     if (path.includes('home.html')) return 'home';
-    return 'index'; // Default is index.html
+    return 'index';
+}
+
+/**
+ * Main initialization function run on window load.
+ */
+window.addEventListener('load', () => {
+    const page = getCurrentPage();
+
+    // Attach dark mode toggle listener globally (for all pages)
+    document.querySelectorAll('.dark-mode-toggle').forEach(btn => {
+        btn.addEventListener('click', toggleDarkMode);
+    });
+
+    // Run page-specific initialization
+    if (page === 'index') {
+        handleIndexInit();
+    } else if (page === 'home') {
+        handleHomeInit();
+    } else if (page === 'checkout') {
+        handleCheckoutInit();
+    }
+});
+
+function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    // Save dark mode preference
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    localStorage.setItem('darkMode', isDarkMode);
 }
 
 // =======================================================
-// 2. INDEX.HTML (Login/Redirect Logic)
+// 3. INDEX.HTML (Login/Redirect Logic)
 // =======================================================
 
 function validateAndRedirect() {
-    if (getCurrentPage() !== 'index') return; // Only run on index.html
+    if (getCurrentPage() !== 'index') return;
     
-    const name = document.getElementById('name').value;
-    const phone = document.getElementById('phone').value;
+    const nameInput = document.getElementById('name');
+    const phoneInput = document.getElementById('phone');
+    
+    const name = nameInput ? nameInput.value.trim() : '';
+    const phone = phoneInput ? phoneInput.value.trim() : '';
 
-    if (name.trim() === "" || phone.length !== 10) {
-        alert("Please enter a valid name and a 10-digit phone number.");
+    if (name === "" || phone.length !== 10 || isNaN(phone)) {
+        alert("ദയവായി സാധുവായ പേരും 10 അക്ക ഫോൺ നമ്പറും നൽകുക."); // Malayalam for prompt
+        nameInput.focus();
         return;
     }
 
-    // 1. Store user data
+    // Store user data
     localStorage.setItem('userName', name);
     localStorage.setItem('userPhone', phone);
     localStorage.setItem('isLoggedIn', 'true');
 
-    // 2. Redirect to the main app page
+    // Redirect to the main app page
     window.location.href = 'home.html';
 }
 
 function handleIndexInit() {
-    if (getCurrentPage() === 'index' && localStorage.getItem('isLoggedIn') === 'true') {
-        // Auto-redirect if already logged in
-        window.location.href = 'home.html';
+    if (getCurrentPage() !== 'index') return;
+    
+    // Check for existing login state and auto-redirect
+    if (localStorage.getItem('isLoggedIn') === 'true') {
+         window.location.href = 'home.html';
+         return;
     }
 
-    // Language toggle for visual effect (only on index)
+    // Language toggle visual effect
     document.querySelectorAll('.lang-button').forEach(button => {
         button.addEventListener('click', function() {
             document.querySelectorAll('.lang-button').forEach(btn => btn.classList.remove('active'));
@@ -59,157 +108,250 @@ function handleIndexInit() {
 }
 
 // =======================================================
-// 3. HOME.HTML (Internal Navigation and Cart Management)
+// 4. HOME.HTML (Internal Navigation and Cart Management)
 // =======================================================
 
-// Function to handle internal screen switching within home.html
+/**
+ * Switches between internal screens on home.html
+ * @param {string} screenId - The ID of the screen to show ('home', 'cart', 'profile', 'book-details')
+ * @param {HTMLElement} [navElement=null] - The nav button clicked (optional)
+ */
 function showScreen(screenId, navElement = null) {
     if (getCurrentPage() !== 'home') return; 
 
-    // Hide all screens
+    const bottomNav = document.getElementById('main-bottom-nav');
+    const bottomActionsBar = document.querySelector('.bottom-actions-bar');
+    
+    // 1. Hide all screens
     APP_SCREENS.forEach(id => {
         const screen = document.getElementById(id);
         if (screen) screen.style.display = 'none';
     });
     
-    // Show the target screen
-    const targetScreen = document.getElementById(screenId);
-    if (targetScreen) targetScreen.style.display = 'flex'; // Use flex for layout
+    // 2. Show the target screen
+    const targetScreen = document.getElementById(screenId + '-screen');
+    if (targetScreen) targetScreen.style.display = 'flex';
 
-    // Update bottom nav active state
+    // 3. Update Nav Bar state
+    if (bottomNav) bottomNav.style.display = 'flex'; // Nav is always visible in home.html (unless details screen)
+    if (bottomActionsBar) bottomActionsBar.style.display = 'none';
+
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    if (navElement) {
-        navElement.classList.add('active');
-        // Hide bottom-actions-bar when navigating to main screens
-        document.querySelector('.bottom-actions-bar').style.display = 'none';
+    
+    if (['home', 'cart', 'profile'].includes(screenId)) {
+        const targetNav = document.querySelector(`.nav-item[data-target="${screenId}"]`);
+        if (targetNav) targetNav.classList.add('active');
     }
 
-    // Special handling for the details screen to show the action bar
-    if (screenId === 'book-details-screen') {
-        document.querySelector('.bottom-actions-bar').style.display = 'flex';
-    }
-
-    // Update cart screen data if navigating to it
-    if (screenId === 'cart-screen') {
+    // 4. Special Handling for screens
+    if (screenId === 'cart') {
         renderCart();
     }
+    if (screenId === 'book-details') {
+        if (bottomNav) bottomNav.style.display = 'none'; // Hide main nav on details
+        if (bottomActionsBar) bottomActionsBar.style.display = 'flex'; // Show actions bar on details
+    }
 }
+
+/**
+ * Renders detailed content for a specific book and switches to the details screen.
+ */
+let currentBookId = null; // Store the ID of the book currently being viewed
 
 function showBookDetails(title, price, category, id) {
     if (getCurrentPage() !== 'home') return;
+    
+    currentBookId = id; // Set global state for cart function
+    const book = bookData.find(b => b.id === id);
 
-    // Logic to render the book details goes here
     const detailsContent = document.querySelector('.book-details-content');
+    if (!book) {
+        detailsContent.innerHTML = `<p>Error: Book details not found for ID: ${id}</p>`;
+        showScreen('book-details');
+        return;
+    }
+    
+    // Render the content
     detailsContent.innerHTML = `
-        <img src="images/placeholder.png" alt="Book Cover" style="width: 100%; height: auto; border-radius: 8px;">
-        <h3 style="margin-top: 15px;">${title}</h3>
-        <p>Author: NIK</p>
-        <p>Category: ${category}</p>
-        <p style="font-size: 1.5em; font-weight: bold; color: var(--primary-color);">Price: ₹${price}</p>
-        <p style="margin-top: 15px;">Detailed description of the book goes here...</p>
+        <img src="images/placeholder.png" alt="${book.title} Cover" style="width: 100%; height: auto; border-radius: 8px;">
+        <h3 style="margin-top: 15px;">${book.title}</h3>
+        <p>രചന: ${book.author}</p>
+        <p>വിഭാഗം: ${book.category}</p>
+        <p style="font-size: 1.5em; font-weight: bold; color: var(--primary-color);">വില: ₹${book.price}</p>
+        <p style="margin-top: 15px;">${book.description}</p>
     `;
-    // Hide the main nav bar when showing details (it will reappear when returning home)
-    document.getElementById('main-bottom-nav').style.display = 'none'; 
-    showScreen('book-details-screen');
+
+    // Update 'Buy Now' button if needed (optional)
+
+    showScreen('book-details');
 }
 
+/**
+ * Adds the currently viewed book to the cart.
+ */
 function addToCart() {
-    if (getCurrentPage() !== 'home') return;
+    if (getCurrentPage() !== 'home' || !currentBookId) return;
     
-    // Simple mock logic: get the current book from the details screen
-    const bookTitle = document.querySelector('.book-details-content h3').innerText;
-    const existingItem = cart.find(item => item.title === bookTitle);
+    const book = bookData.find(b => b.id === currentBookId);
+    if (!book) return;
+
+    const existingItem = cart.find(item => item.id === currentBookId);
 
     if (existingItem) {
         existingItem.quantity += 1;
     } else {
-        const book = bookData.find(b => b.title === bookTitle);
-        if (book) {
-            cart.push({...book, quantity: 1});
-        }
+        cart.push({...book, quantity: 1});
     }
+    
     localStorage.setItem('cart', JSON.stringify(cart));
     updateCartBadge();
-    alert(`${bookTitle} added to cart!`);
+    
+    const addButton = document.getElementById('add-to-cart-btn');
+    addButton.innerText = `🛒 കാർട്ടിലേക്ക് ചേർത്തു! (${(existingItem ? existingItem.quantity + 1 : 1)})`;
+    setTimeout(() => {
+        addButton.innerText = '🛒 കാർട്ടിലേക്ക് ചേർക്കുക';
+    }, 1500);
+
+    // Optionally go back to home or cart
+    // showScreen('home'); 
 }
 
 function updateCartBadge() {
-    if (getCurrentPage() === 'home') {
-        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-        const badge = document.getElementById('cart-count');
-        if (badge) {
-            badge.innerText = totalItems;
-            badge.style.display = totalItems > 0 ? 'block' : 'none';
-        }
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const badge = document.getElementById('cart-count');
+    if (badge) {
+        badge.innerText = totalItems;
+        badge.style.display = totalItems > 0 ? 'block' : 'none';
     }
 }
 
 function renderCart() {
-    // Renders cart items on cart-screen (implementation omitted for brevity)
+    if (getCurrentPage() !== 'home') return;
+    
+    const cartScreen = document.getElementById('cart-screen');
+    const existingItemsList = cartScreen.querySelector('.cart-items-list');
+    
+    // Add a container if it doesn't exist
+    let itemsList = existingItemsList;
+    if (!itemsList) {
+        itemsList = document.createElement('div');
+        itemsList.classList.add('cart-items-list');
+        cartScreen.insertBefore(itemsList, cartScreen.querySelector('.cart-actions'));
+    }
+
+    let cartHTML = '';
+    let total = 0;
+
+    if (cart.length === 0) {
+        cartHTML = `<p style="text-align: center; margin-top: 50px;">കാർട്ടിൽ നിലവിൽ പുസ്തകങ്ങളൊന്നും ചേർത്തിട്ടില്ല.</p>`;
+    } else {
+        cart.forEach((item, index) => {
+            const itemTotal = item.price * item.quantity;
+            total += itemTotal;
+            cartHTML += `
+                <div class="book-card cart-item" style="margin-bottom: 20px;">
+                    <img src="images/placeholder.png" alt="Cover" class="book-cover">
+                    <div class="book-details" style="flex-grow: 1;">
+                        <div class="book-title-ml">${item.title}</div>
+                        <div class="book-author">വില: ₹${item.price} x ${item.quantity}</div>
+                        <div class="book-category" style="font-weight: bold;">ആകെ: ₹${itemTotal}</div>
+                    </div>
+                    <button onclick="removeFromCart(${index})" style="background: red; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">-</button>
+                </div>
+            `;
+        });
+        cartHTML += `<h3 style="text-align: right; padding: 10px; border-top: 1px solid var(--border-color);">മൊത്തം തുക: ₹${total}</h3>`;
+    }
+
+    itemsList.innerHTML = cartHTML;
+}
+
+function removeFromCart(index) {
+    if (index >= 0 && index < cart.length) {
+        cart.splice(index, 1);
+        localStorage.setItem('cart', JSON.stringify(cart));
+        updateCartBadge();
+        renderCart(); // Re-render the cart view
+    }
 }
 
 function buyNow() {
-    // Clear cart and add only the current book, then redirect to checkout.html
-    alert("Buy Now clicked! Redirecting to checkout.");
-    // Implementation needed here
+    // If Buy Now is clicked, ensure only the current book is in cart before redirecting.
+    if (!currentBookId) {
+        alert("പുസ്തകം തിരഞ്ഞെടുക്കുക.");
+        return;
+    }
+    
+    // 1. Find the current book details
+    const book = bookData.find(b => b.id === currentBookId);
+
+    // 2. Overwrite cart with only this one book (for immediate purchase)
+    cart = [{...book, quantity: 1}];
+    localStorage.setItem('cart', JSON.stringify(cart));
+
+    // 3. Redirect
     window.location.href = 'checkout.html';
 }
 
 function handleHomeInit() {
     if (getCurrentPage() !== 'home') return;
     
-    // Check if user is logged in, if not, redirect to index.html
+    // Check if user is logged in
     if (localStorage.getItem('isLoggedIn') !== 'true') {
         window.location.href = 'index.html';
         return;
     }
     
     // Initial setup: Show the home screen and hide others
-    showScreen('home-screen', document.querySelector('.nav-item[data-target="home"]'));
-    document.getElementById('main-bottom-nav').style.display = 'flex'; // Ensure nav is visible on the home page
-    document.querySelector('.bottom-actions-bar').style.display = 'none'; 
-    updateCartBadge();
+    // The showScreen function handles hiding all and showing one.
+    showScreen('home'); 
+    
+    // Set initial active state for nav bar
+    const homeNav = document.querySelector('.nav-item[data-target="home"]');
+    if (homeNav) homeNav.classList.add('active');
 
-    // Dark mode toggle listener
-    document.querySelector('.dark-mode-toggle').addEventListener('click', function() {
-        document.body.classList.toggle('dark-mode');
-    });
+    updateCartBadge();
 }
 
 // =======================================================
-// 4. CHECKOUT.HTML (Validation and Payment Logic)
+// 5. CHECKOUT.HTML (Validation and Payment Logic)
 // =======================================================
 
 function calculateTotal() {
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    return total;
+    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 }
 
 function renderCheckoutSummary() {
     if (getCurrentPage() !== 'checkout') return;
     
     const summaryItems = document.getElementById('summary-items');
+    const totalAmountSpan = document.getElementById('total-amount');
+    const payBtnText = document.getElementById('pay-btn-text');
+    
     let total = 0;
     summaryItems.innerHTML = '';
 
     if (cart.length === 0) {
-        summaryItems.innerHTML = '<p>Your cart is empty.</p>';
-        document.getElementById('pay-now-btn').disabled = true;
-    } else {
-        cart.forEach(item => {
-            const itemTotal = item.price * item.quantity;
-            total += itemTotal;
-            summaryItems.innerHTML += `
-                <div class="summary-line">
-                    <span>${item.title} (x${item.quantity})</span>
-                    <span>₹${itemTotal}</span>
-                </div>
-            `;
-        });
-    }
+        summaryItems.innerHTML = '<p>കാർട്ടിൽ പുസ്തകങ്ങൾ ഇല്ല.</p>';
+        totalAmountSpan.innerText = `₹0`;
+        if (payBtnText) payBtnText.parentNode.disabled = true;
+        return;
+    } 
 
-    document.getElementById('total-amount').innerText = `₹${total}`;
-    document.getElementById('pay-btn-text').innerText = `₹${total} അടയ്ക്കുക`;
+    cart.forEach(item => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        summaryItems.innerHTML += `
+            <div class="summary-line">
+                <span>${item.title} (x${item.quantity})</span>
+                <span>₹${itemTotal}</span>
+            </div>
+        `;
+    });
+
+    totalAmountSpan.innerText = `₹${total}`;
+    if (payBtnText) payBtnText.innerText = `₹${total} അടയ്ക്കുക`;
+    if (payBtnText) payBtnText.parentNode.disabled = false;
 }
 
 function processPayment() {
@@ -219,21 +361,24 @@ function processPayment() {
     const pincode = document.getElementById('pincode').value.trim();
     let isValid = true;
 
-    // Basic Validation
+    // Validation
+    const addressError = document.getElementById('address-error');
+    const pincodeError = document.getElementById('pincode-error');
+
     if (address.length < 10) {
-        document.getElementById('address-error').innerText = "Please enter a complete address.";
-        document.getElementById('address-error').style.display = 'block';
+        addressError.innerText = "ദയവായി പൂർണ്ണമായ വിലാസം നൽകുക.";
+        addressError.style.display = 'block';
         isValid = false;
     } else {
-        document.getElementById('address-error').style.display = 'none';
+        addressError.style.display = 'none';
     }
 
     if (pincode.length !== 6 || isNaN(pincode)) {
-        document.getElementById('pincode-error').innerText = "Please enter a 6-digit PIN code.";
-        document.getElementById('pincode-error').style.display = 'block';
+        pincodeError.innerText = "ദയവായി 6 അക്ക പിൻ കോഡ് നൽകുക.";
+        pincodeError.style.display = 'block';
         isValid = false;
     } else {
-        document.getElementById('pincode-error').style.display = 'none';
+        pincodeError.style.display = 'none';
     }
 
     if (isValid) {
@@ -251,24 +396,14 @@ function processPayment() {
 function handleCheckoutInit() {
     if (getCurrentPage() !== 'checkout') return;
     
+    // Redirect if cart is empty (optional)
+    if (cart.length === 0) {
+        // window.location.href = 'home.html';
+        // return;
+    }
+    
     // Initial display setup
     document.getElementById('checkout-screen').style.display = 'flex';
     document.getElementById('thank-you-screen').style.display = 'none';
     renderCheckoutSummary();
 }
-
-// =======================================================
-// 5. INITIALIZATION LOGIC (Runs on every page load)
-// =======================================================
-
-window.addEventListener('load', () => {
-    const page = getCurrentPage();
-
-    if (page === 'index') {
-        handleIndexInit();
-    } else if (page === 'home') {
-        handleHomeInit();
-    } else if (page === 'checkout') {
-        handleCheckoutInit();
-    }
-});
