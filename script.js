@@ -2,19 +2,15 @@
 // 1. CONFIGURATION: YOUR DEPLOYED APP SCRIPT URL
 // =========================================================
 const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxfutlqgo1z76Upfct07p6brPJEfYZUiNii7T445cIu6mavWHG7T9cltAvTPLqTOt6eyQ/exec";
-
 // =========================================================
 // 2. UPI TEST CONFIGURATION (REPLACE FOR PRODUCTION)
 // =========================================================
 const TEST_UPI_VPA = 'test@ybl'; // <<< Replace with your actual UPI VPA (e.g., yourname@okicici)
 const MERCHANT_NAME = 'BooksByNIK';
-
-
 // =========================================================
+
 let currentLang = 'en';
-
 let cartItemCount = 0;
-
 let cartDetails = {
     bookTitle: "ഹൃദയത്തിന്റെ മന്ത്രണങ്ങൾ",
     bookCode: "WOH001",
@@ -22,6 +18,7 @@ let cartDetails = {
     quantity: 1,
     total: 299
 };
+
 // --- Translations Map (Partial - Only required elements) ---
 const translations = {
     'en': {
@@ -42,6 +39,7 @@ const translations = {
         'ഹോം': 'ഹോം', 'കാർട്ട്': 'കാർട്ട്', 'പ്രൊഫൈൽ': 'പ്രൊഫൈൽ'
     }
 };
+
 // --- API Functions (Connects to your Google Sheet) ---
 async function sendDataToAppScript(data) {
     console.log(`Sending data (type: ${data.type}) to App Script...`);
@@ -61,6 +59,7 @@ async function sendDataToAppScript(data) {
         return { result: "error", message: error.toString() };
     }
 }
+
 // ------------------------------------------------------------------
 // --- Core Navigation and UI Functions ---
 // ------------------------------------------------------------------
@@ -68,13 +67,10 @@ function showScreen(screenId, navElement = null) {
     document.querySelectorAll('.app-screen').forEach(screen => {
         screen.style.display = 'none';
     });
+    
+    // CRITICAL FIX: Ensure screens use 'flex' for the full-height mobile layout
+    document.getElementById(screenId).style.display = 'flex'; 
 
-    // CRITICAL FIX: Ensure screens use 'block' for scrolling or 'flex' for centering
-    if (screenId === 'login-screen') {
-        document.getElementById(screenId).style.display = 'flex'; 
-    } else {
-        document.getElementById(screenId).style.display = 'block'; 
-    }
     
     document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
         item.classList.remove('active');
@@ -96,7 +92,7 @@ function showScreen(screenId, navElement = null) {
     } else {
         bottomNav.style.display = 'flex'; 
     }
-
+    
     if (screenId === 'cart-screen') updateCartScreen();
     if (screenId === 'checkout-screen') prefillCheckout();
 }
@@ -216,7 +212,6 @@ function prefillCheckout() {
 // ------------------------------------------------------------------
 // --- Book Details Screen Functions ---
 // ------------------------------------------------------------------
-
 function showBookDetails(title, price, category, bookCode) {
     // 1. Update the cart details object with the selected book
     cartDetails.bookTitle = title;
@@ -231,13 +226,13 @@ function showBookDetails(title, price, category, bookCode) {
     // 3. Set the image sources
     const mainCover = document.getElementById('main-book-cover');
     mainCover.src = `images/placeholder-main.png`; 
-
+    
     // 4. Reset thumbnail selection
     document.querySelectorAll('.preview-thumbnails .thumbnail').forEach(thumb => {
         thumb.classList.remove('active');
     });
     document.querySelector('.preview-thumbnails .thumbnail').classList.add('active');
-
+    
     // 5. Navigate to the screen
     showScreen('book-details-screen');
 }
@@ -259,7 +254,6 @@ function swapImage(thumbnail) {
 // ------------------------------------------------------------------
 // --- Event Listeners and Validation ---
 // ------------------------------------------------------------------
-
 // Login screen validation and App Script log (type: user_login)
 document.getElementById('continue-btn').addEventListener('click', async () => {
     const nameInput = document.getElementById('name');
@@ -280,6 +274,7 @@ document.getElementById('continue-btn').addEventListener('click', async () => {
         phoneGroup.classList.add('error');
         isValid = false;
     }
+
     if (isValid) {
         // 1. Prepare data for the App Script (type: user_login)
         const loginData = {
@@ -301,6 +296,7 @@ document.getElementById('continue-btn').addEventListener('click', async () => {
         showScreen('home-screen', homeNav);
     }
 });
+
 // Checkout screen validation and Payment Initiation (type: checkout)
 document.getElementById('pay-now-btn').addEventListener('click', async () => {
     const addressInput = document.getElementById('full-address');
@@ -326,6 +322,7 @@ document.getElementById('pay-now-btn').addEventListener('click', async () => {
         pincodeError.style.display = 'block';
         isValid = false;
     }
+
     if (isValid) {
         // Data for App Script and Payment Notes
         const fullName = document.getElementById('checkout-name').value.trim();
@@ -351,7 +348,7 @@ document.getElementById('pay-now-btn').addEventListener('click', async () => {
         // 2. Save Checkout Data to Google Sheet (Async)
         await sendDataToAppScript(checkoutData);
 
-        // 3. Initiate Actual UPI Payment Redirection (FIXED: Redirect instead of just showing Thank You)
+        // 3. Initiate Actual UPI Payment Redirection
         const VPA = TEST_UPI_VPA; // Use the VPA defined at the top
         const MerchantNameEncoded = encodeURIComponent(MERCHANT_NAME);
         const Amount = cartDetails.total.toFixed(2);
@@ -367,9 +364,6 @@ document.getElementById('pay-now-btn').addEventListener('click', async () => {
 
         // Execute the UPI redirect
         window.location.href = upiLink;
-        
-        // NOTE: The user is now leaving the app. The 'thank-you-screen' 
-        // will not be visible unless they return successfully or we manually navigate later.
     } else {
         if (addressInput.classList.contains('error')) {
             addressInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -378,18 +372,23 @@ document.getElementById('pay-now-btn').addEventListener('click', async () => {
         }
     }
 });
+
+// ------------------------------------------------------------------
 // --- Initialization ---
-// Dark Mode Toggle
-document.querySelectorAll('.dark-mode-toggle').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const body = document.body;
-        body.classList.toggle('dark-theme');
-        const icon = btn.textContent;
-        btn.textContent = icon === '🌙' ? '☀️' : '🌙';
-    });
-});
+// ------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
+    
+    // =======================================================
+    // FIX: Force all screens to display: none; to prevent stacking
+    // This overcomes aggressive CSS caching on mobile devices.
+    // =======================================================
+    document.querySelectorAll('.app-screen').forEach(screen => {
+        screen.style.display = 'none';
+    });
+    // =======================================================
+    
     // Initial state setup
+    // Now call showScreen('login-screen') to explicitly set it to 'flex'
     showScreen('login-screen');
     updateCartBadge(); 
     
@@ -397,16 +396,25 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('lang-en').addEventListener('click', () => updateLanguage('en'));
     document.getElementById('lang-ml').addEventListener('click', () => updateLanguage('ml'));
     updateLanguage('en'); 
-
-    // FIX APPLIED HERE: Attach event listeners to all bottom nav items
+    
+    // Attach event listeners to all bottom nav items
     document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
         item.addEventListener('click', function() {
             const target = this.getAttribute('data-target');
             if (target) {
                 // target will be 'home', 'cart', or 'profile'
-                // This fixes the Profile button not working
                 showScreen(target + '-screen', this);
             }
+        });
+    });
+    
+    // Dark Mode Toggle
+    document.querySelectorAll('.dark-mode-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const body = document.body;
+            body.classList.toggle('dark-theme');
+            const icon = btn.textContent;
+            btn.textContent = icon === '🌙' ? '☀️' : '🌙';
         });
     });
 });
