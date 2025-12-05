@@ -2,10 +2,12 @@
 // 1. CONFIGURATION: YOUR DEPLOYED APP SCRIPT URL
 // =========================================================
 const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxfutlqgo1z76Upfct07p6brPJEfYZUiNii7T445cIu6mavWHG7T9cltAvTPLqTOt6eyQ/exec";
-// =========================================================
 
+// =========================================================
 let currentLang = 'en';
+
 let cartItemCount = 0;
+
 let cartDetails = {
     bookTitle: "ഹൃദയത്തിന്റെ മന്ത്രണങ്ങൾ",
     bookCode: "WOH001",
@@ -13,11 +15,10 @@ let cartDetails = {
     quantity: 1,
     total: 299
 };
-
 // --- Translations Map (Partial - Only required elements) ---
 const translations = {
     'en': {
-        'main-title': 'Welcome to BooksByNIK',
+        'main-title': 'Welcome to BooksByNIK V8', // Keep V8 for now to ensure index.html update
         'sub-title': 'Discover premium books directly from the author',
         'name-label': 'Your Name',
         'phone-label': 'Phone Number',
@@ -26,7 +27,7 @@ const translations = {
         'ഹോം': 'Home', 'കാർട്ട്': 'Cart', 'പ്രൊഫൈൽ': 'Profile'
     },
     'ml': {
-        'main-title': 'BooksByNIK-ലേക്ക് സ്വാഗതം',
+        'main-title': 'BooksByNIK-ലേക്ക് സ്വാഗതം V8', // Keep V8 for now to ensure index.html update
         'sub-title': 'എഴുത്തുകാരനിൽ നിന്ന് നേരിട്ട് പ്രീമിയം പുസ്തകങ്ങൾ കണ്ടെത്തുക',
         'name-label': 'നിങ്ങളുടെ പേര്',
         'phone-label': 'ഫോൺ നമ്പർ',
@@ -34,9 +35,7 @@ const translations = {
         'ഹോം': 'ഹോം', 'കാർട്ട്': 'കാർട്ട്', 'പ്രൊഫൈൽ': 'പ്രൊഫൈൽ'
     }
 };
-
 // --- API Functions (Connects to your Google Sheet) ---
-
 async function sendDataToAppScript(data) {
     console.log(`Sending data (type: ${data.type}) to App Script...`);
     try {
@@ -56,21 +55,18 @@ async function sendDataToAppScript(data) {
         return { result: "error", message: error.toString() };
     }
 }
-
-
 // --- Core Navigation and UI Functions ---
-
 function showScreen(screenId, navElement = null) {
     document.querySelectorAll('.app-screen').forEach(screen => {
         screen.style.display = 'none';
     });
+
     document.getElementById(screenId).style.display = 'flex'; // Use flex for login screen centering
     if (screenId !== 'login-screen') {
         document.getElementById(screenId).style.display = 'block'; // Use block for scrolling screens
     }
 
-
-    document.querySelectorAll('.nav-item').forEach(item => {
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
         item.classList.remove('active');
     });
     
@@ -78,9 +74,19 @@ function showScreen(screenId, navElement = null) {
     if (navElement) {
         navElement.classList.add('active');
     } else if (screenId !== 'login-screen' && screenId !== 'thank-you-screen') {
+        // Handle navigation from internal buttons (like back/continue)
         const targetNav = document.querySelector(`.nav-item[data-target="${screenId.replace('-screen', '')}"]`);
         if (targetNav) targetNav.classList.add('active');
     }
+
+    // Hide Bottom Nav for screens without it
+    const bottomNav = document.querySelector('.bottom-nav');
+    if (screenId === 'login-screen' || screenId === 'checkout-screen' || screenId === 'thank-you-screen') {
+        bottomNav.style.display = 'none';
+    } else {
+        bottomNav.style.display = 'flex';
+    }
+
 
     if (screenId === 'cart-screen') updateCartScreen();
     if (screenId === 'checkout-screen') prefillCheckout();
@@ -105,7 +111,6 @@ function updateLanguage(lang) {
             span.textContent = translations[lang][mlText];
         }
     });
-
     // Update language button active state
     document.getElementById('lang-en').classList.remove('active');
     document.getElementById('lang-ml').classList.remove('active');
@@ -166,6 +171,10 @@ function updateCartScreen() {
     const emptyState = document.getElementById('cart-empty-state');
     const filledState = document.getElementById('cart-filled-state');
     if (cartDetails.quantity > 0) {
+        // Update filled cart details
+        document.getElementById('item-quantity').textContent = cartDetails.quantity;
+        document.getElementById('total-amount').textContent = `₹${cartDetails.total}`;
+        
         emptyState.style.display = 'none';
         filledState.style.display = 'block';
     } else {
@@ -194,7 +203,54 @@ function prefillCheckout() {
     document.getElementById('checkout-total-price').textContent = `₹${cartDetails.total}`;
 }
 
+// =========================================================
+// !!! CRITICAL MISSING FUNCTIONS ADDED HERE !!!
+// =========================================================
+
+function showBookDetails(title, price, category, bookCode) {
+    // 1. Update the cart details object with the selected book
+    cartDetails.bookTitle = title;
+    cartDetails.bookCode = bookCode;
+    cartDetails.price = price;
+    
+    // 2. Populate the Detail Screen's elements
+    document.getElementById('detail-title').textContent = title;
+    document.getElementById('detail-category').textContent = category;
+    document.getElementById('detail-price').textContent = `₹${price}`;
+    
+    // 3. Set the image sources
+    const mainCover = document.getElementById('main-book-cover');
+    // Using the placeholder-main image from the HTML structure
+    mainCover.src = `images/placeholder-main.png`; 
+
+    // 4. Reset thumbnail selection
+    document.querySelectorAll('.preview-thumbnails .thumbnail').forEach(thumb => {
+        thumb.classList.remove('active');
+    });
+    // The first thumbnail should be marked active
+    document.querySelector('.preview-thumbnails .thumbnail').classList.add('active');
+
+    // 5. Navigate to the screen
+    showScreen('book-details-screen');
+}
+
+function swapImage(thumbnail) {
+    const mainCover = document.getElementById('main-book-cover');
+    const newSrc = thumbnail.getAttribute('data-full-src');
+    
+    // Update main image source
+    mainCover.src = newSrc;
+    
+    // Update active class on thumbnails
+    document.querySelectorAll('.preview-thumbnails .thumbnail').forEach(thumb => {
+        thumb.classList.remove('active');
+    });
+    thumbnail.classList.add('active');
+}
+
+// =========================================================
 // --- Event Listeners and Validation ---
+// =========================================================
 
 // Login screen validation and App Script log (type: user_login)
 document.getElementById('continue-btn').addEventListener('click', async () => {
@@ -216,7 +272,6 @@ document.getElementById('continue-btn').addEventListener('click', async () => {
         phoneGroup.classList.add('error');
         isValid = false;
     }
-
     if (isValid) {
         // 1. Prepare data for the App Script (type: user_login)
         const loginData = {
@@ -232,10 +287,12 @@ document.getElementById('continue-btn').addEventListener('click', async () => {
         // 3. Save details locally and navigate
         localStorage.setItem('userName', nameInput.value.trim());
         localStorage.setItem('userPhone', '+91 ' + phoneValue);
-        showScreen('home-screen');
+        
+        // Correctly set the home screen as active in the nav bar
+        const homeNav = document.querySelector('.nav-item[data-target="home"]');
+        showScreen('home-screen', homeNav);
     }
 });
-
 // Checkout screen validation and Payment Initiation (type: checkout)
 document.getElementById('pay-now-btn').addEventListener('click', async () => {
     const addressInput = document.getElementById('full-address');
@@ -261,7 +318,6 @@ document.getElementById('pay-now-btn').addEventListener('click', async () => {
         pincodeError.style.display = 'block';
         isValid = false;
     }
-
     if (isValid) {
         // Data for App Script and Payment Notes
         const fullName = document.getElementById('checkout-name').value.trim();
@@ -289,7 +345,6 @@ document.getElementById('pay-now-btn').addEventListener('click', async () => {
 
         // 3. Simulate Payment Gateway Redirect and navigate
         console.log(`Simulating UPI redirect with Notes: ${paymentNote}`);
-        // alert(`Validation successful. Simulating UPI redirect with Notes: ${paymentNote}`);
         
         showScreen('thank-you-screen');
     } else {
@@ -300,9 +355,7 @@ document.getElementById('pay-now-btn').addEventListener('click', async () => {
         }
     }
 });
-
 // --- Initialization ---
-
 // Dark Mode Toggle
 document.querySelectorAll('.dark-mode-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -312,7 +365,6 @@ document.querySelectorAll('.dark-mode-toggle').forEach(btn => {
         btn.textContent = icon === '🌙' ? '☀️' : '🌙';
     });
 });
-
 document.addEventListener('DOMContentLoaded', () => {
     // Initial state setup
     showScreen('login-screen');
