@@ -34,26 +34,29 @@ body {
     position: relative;
     background: white;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    /* CRITICAL FIX: Set app-container to flex column for full height app layout */
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
+    /* CRITICAL FIX 1: Lock container to full viewport height */
+    height: 100vh !important; 
+    /* CRITICAL FIX 2: Set app-container to flex column for proper screen stretching */
+    display: flex !important;
+    flex-direction: column !important;
+    /* Hide any possible overflow from stacking */
+    overflow: hidden !important; 
 }
 body.dark-theme .app-container {
     background: #121212;
 }
 .app-screen {
-    /* Set min-height to allow content to push */
-    min-height: 100vh;
-    overflow-y: hidden; 
-    background-color: var(--light-bg);
-    /* CRITICAL: Must be initially set to none in JS/HTML but defined here for proper layout */
+    /* CRITICAL: Must be initially set to none when inactive */
     display: none; 
-    /* CRITICAL FIX: Allow screen to take up remaining vertical space */
+    /* CRITICAL FIX 3: Allow active screen to fill remaining space (100% of app-container height) */
     flex-grow: 1;
     /* Use flex for internal layout flow */
     display: flex !important; 
     flex-direction: column; 
+    /* Ensure only the content inside the screen is scrollable, not the screen itself */
+    overflow-y: hidden;
+    /* Reset min-height to allow flex-grow to work */
+    min-height: 0; 
 }
 /* --- Shared Elements --- */
 .header-with-back, .app-header {
@@ -132,10 +135,12 @@ input.error, textarea.error, .phone-input.error {
 body.dark-theme .add-to-cart-btn { border-color: #444; }
 /* --- Login Screen --- */
 #login-screen {
+    /* Set back to defaults for a non-scrolling screen that fills the container */
     display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
     background-color: white;
-    min-height: 100%;
     overflow-y: auto;
+    /* Ensure login screen scrolls if content is too large (unlike other screens) */
+    min-height: 100%;
 }
 body.dark-theme #login-screen { background-color: #121212; }
 .language-selector { display: flex; border: 1px solid var(--primary-color); border-radius: 8px; overflow: hidden; margin-bottom: 20px;}
@@ -196,6 +201,7 @@ body.dark-theme .book-metadata, body.dark-theme .description-box { background-co
     justify-content: space-between; 
     align-items: center;
     box-sizing: border-box; /* Crucial for proper width/padding calculation */
+    z-index: 90; /* Must be below the bottom-nav */
 }
 .bottom-actions-bar button {
     flex: 1;
