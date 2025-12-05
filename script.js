@@ -1,420 +1,251 @@
-// =========================================================
-// 1. CONFIGURATION: YOUR DEPLOYED APP SCRIPT URL
-// =========================================================
-const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxfutlqgo1z76Upfct07p6brPJEfYZUiNii7T445cIu6mavWHG7T9cltAvTPLqTOt6eyQ/exec";
-// =========================================================
-// 2. UPI TEST CONFIGURATION (REPLACE FOR PRODUCTION)
-// =========================================================
-const TEST_UPI_VPA = 'test@ybl'; // <<< Replace with your actual UPI VPA (e.g., yourname@okicici)
-const MERCHANT_NAME = 'BooksByNIK';
-// =========================================================
+// Global variables needed across both pages (user/cart data, language)
+let currentLanguage = 'ml';
+let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+let userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
 
-let currentLang = 'en';
-let cartItemCount = 0;
-let cartDetails = {
-    bookTitle: "ഹൃദയത്തിന്റെ മന്ത്രണങ്ങൾ",
-    bookCode: "WOH001",
-    price: 299,
-    quantity: 1,
-    total: 299
-};
+// =================================================================
+// 1. SHARED/GLOBAL FUNCTIONS (Run on both index.html and checkout.html)
+// =================================================================
 
-// --- Translations Map (Partial - Only required elements) ---
-const translations = {
-    'en': {
-        'main-title': 'Welcome to BooksByNIK V8',
-        'sub-title': 'Discover premium books directly from the author',
-        'name-label': 'Your Name',
-        'phone-label': 'Phone Number',
-        'continue-btn': 'Continue',
-        // Navigation (data-ml attribute)
-        'ഹോം': 'Home', 'കാർട്ട്': 'Cart', 'പ്രൊഫൈൽ': 'Profile'
-    },
-    'ml': {
-        'main-title': 'BooksByNIK-ലേക്ക് സ്വാഗതം V8',
-        'sub-title': 'എഴുത്തുകാരനിൽ നിന്ന് നേരിട്ട് പ്രീമിയം പുസ്തകങ്ങൾ കണ്ടെത്തുക',
-        'name-label': 'നിങ്ങളുടെ പേര്',
-        'phone-label': 'ഫോൺ നമ്പർ',
-        'continue-btn': 'തുടരുക',
-        'ഹോം': 'ഹോം', 'കാർട്ട്': 'കാർട്ട്', 'പ്രൊഫൈൽ': 'പ്രൊഫൈൽ'
-    }
-};
-
-// --- API Functions (Connects to your Google Sheet) ---
-async function sendDataToAppScript(data) {
-    console.log(`Sending data (type: ${data.type}) to App Script...`);
-    try {
-        const response = await fetch(APP_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors', 
-            cache: 'no-cache',
-            headers: { 'Content-Type': 'application/json' },
-            redirect: 'follow',
-            body: JSON.stringify(data)
-        });
-        console.log(`Data sent successfully to Sheet: ${data.type}`);
-        return { result: "success" };
-    } catch (error) {
-        console.error("Error submitting data:", error);
-        return { result: "error", message: error.toString() };
-    }
-}
-
-// ------------------------------------------------------------------
-// --- Core Navigation and UI Functions ---
-// ------------------------------------------------------------------
-function showScreen(screenId, navElement = null) {
-    document.querySelectorAll('.app-screen').forEach(screen => {
-        screen.style.display = 'none';
+function updateCartCount() {
+    const totalQty = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const cartCountElements = document.querySelectorAll('#cart-count');
+    cartCountElements.forEach(el => {
+        el.textContent = totalQty;
+        el.style.display = totalQty > 0 ? 'block' : 'none';
     });
-    
-    // CRITICAL FIX: Ensure screens use 'flex' for the full-height mobile layout
-    document.getElementById(screenId).style.display = 'flex'; 
-
-    
-    document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    
-    // Set Active Nav Item
-    if (navElement) {
-        navElement.classList.add('active');
-    } else if (screenId !== 'login-screen' && screenId !== 'thank-you-screen') {
-        // Handle navigation from internal buttons (like back/continue)
-        const targetNav = document.querySelector(`.nav-item[data-target="${screenId.replace('-screen', '')}"]`);
-        if (targetNav) targetNav.classList.add('active');
-    }
-
-    // Hide Bottom Nav for screens without it
-    const bottomNav = document.querySelector('.bottom-nav');
-    if (screenId === 'login-screen' || screenId === 'checkout-screen' || screenId === 'thank-you-screen') {
-        bottomNav.style.display = 'none';
-    } else {
-        bottomNav.style.display = 'flex'; 
-    }
-    
-    if (screenId === 'cart-screen') updateCartScreen();
-    if (screenId === 'checkout-screen') prefillCheckout();
 }
 
-function updateLanguage(lang) {
-    currentLang = lang;
-    
-    // Update main titles
-    const keys = ['main-title', 'sub-title', 'name-label', 'phone-label', 'continue-btn'];
-    keys.forEach(key => {
-        const element = document.getElementById(key);
-        if (element) {
-            element.textContent = translations[lang][key];
-        }
-    });
-    
-    // Update bottom nav and other ML elements
-    document.querySelectorAll('.nav-item span[data-ml]').forEach(span => {
-        const mlText = span.getAttribute('data-ml');
-        if (translations[lang][mlText]) {
-            span.textContent = translations[lang][mlText];
-        }
-    });
-    // Update language button active state
-    document.getElementById('lang-en').classList.remove('active');
-    document.getElementById('lang-ml').classList.remove('active');
-    document.getElementById(`lang-${lang}`).classList.add('active');
+// Function to handle Dark Mode Toggle (simplified for shared use)
+function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
 }
 
-function updateCartBadge() {
-    const badge = document.getElementById('cart-count');
-    cartItemCount = cartDetails.quantity;
-    if (cartItemCount > 0) {
-        badge.textContent = cartItemCount;
-        badge.style.display = 'block';
-    } else {
-        badge.style.display = 'none';
-    }
+// Apply dark mode immediately on load
+if (localStorage.getItem('darkMode') === 'true') {
+    document.body.classList.add('dark-mode');
 }
 
-function addToCart() {
-    cartDetails.quantity = 1;
-    cartDetails.total = cartDetails.price * cartDetails.quantity;
-    updateCartBadge();
-    
-    const button = document.getElementById('add-to-cart-btn');
-    const originalText = button.innerHTML;
-    button.innerHTML = '✅ കാർട്ടിൽ ചേർത്തു';
-    button.disabled = true;
-
-    setTimeout(() => {
-        button.innerHTML = originalText;
-        button.disabled = false;
-    }, 1500);
-}
-
-function updateQty(change) {
-    let newQty = cartDetails.quantity + change;
-    if (newQty >= 1) {
-        cartDetails.quantity = newQty;
-    } else {
-        removeFromCart();
-        return;
-    }
-    cartDetails.total = cartDetails.price * cartDetails.quantity;
-    
-    // Update UI elements
-    document.getElementById('item-quantity').textContent = cartDetails.quantity;
-    document.getElementById('total-amount').textContent = `₹${cartDetails.total}`;
-    updateCartBadge();
-}
-
-function removeFromCart() {
-    cartDetails.quantity = 0;
-    cartDetails.total = 0;
-    updateCartBadge();
-    updateCartScreen();
-}
-
-function updateCartScreen() {
-    const emptyState = document.getElementById('cart-empty-state');
-    const filledState = document.getElementById('cart-filled-state'); 
-    
-    if (cartDetails.quantity > 0) {
-        // Update filled cart details
-        document.getElementById('item-quantity').textContent = cartDetails.quantity;
-        document.getElementById('total-amount').textContent = `₹${cartDetails.total}`;
-        
-        emptyState.style.display = 'none';
-        filledState.style.display = 'block';
-    } else {
-        emptyState.style.display = 'block';
-        filledState.style.display = 'none';
-    }
-}
-
-function buyNow() {
-    cartDetails.quantity = 1;
-    cartDetails.total = cartDetails.price * cartDetails.quantity;
-    updateCartBadge();
-    showScreen('checkout-screen');
-}
-
-function prefillCheckout() {
-    const savedName = localStorage.getItem('userName') || 'Floor Plan Creator';
-    const savedPhone = localStorage.getItem('userPhone') || '+91 9876543210';
-
-    document.getElementById('checkout-name').value = savedName;
-    document.getElementById('checkout-phone').value = savedPhone;
-    
-    // Update summary
-    document.getElementById('checkout-qty').textContent = cartDetails.quantity;
-    document.getElementById('checkout-price').textContent = `₹${cartDetails.price}`;
-    document.getElementById('checkout-total-price').textContent = `₹${cartDetails.total}`;
-}
-
-// ------------------------------------------------------------------
-// --- Book Details Screen Functions ---
-// ------------------------------------------------------------------
-function showBookDetails(title, price, category, bookCode) {
-    // 1. Update the cart details object with the selected book
-    cartDetails.bookTitle = title;
-    cartDetails.bookCode = bookCode;
-    cartDetails.price = price;
-    
-    // 2. Populate the Detail Screen's elements
-    document.getElementById('detail-title').textContent = title;
-    document.getElementById('detail-category').textContent = category;
-    document.getElementById('detail-price').textContent = `₹${price}`;
-    
-    // 3. Set the image sources
-    const mainCover = document.getElementById('main-book-cover');
-    mainCover.src = `images/placeholder-main.png`; 
-    
-    // 4. Reset thumbnail selection
-    document.querySelectorAll('.preview-thumbnails .thumbnail').forEach(thumb => {
-        thumb.classList.remove('active');
-    });
-    document.querySelector('.preview-thumbnails .thumbnail').classList.add('active');
-    
-    // 5. Navigate to the screen
-    showScreen('book-details-screen');
-}
-
-function swapImage(thumbnail) {
-    const mainCover = document.getElementById('main-book-cover');
-    const newSrc = thumbnail.getAttribute('data-full-src');
-    
-    // Update main image source
-    mainCover.src = newSrc;
-    
-    // Update active class on thumbnails
-    document.querySelectorAll('.preview-thumbnails .thumbnail').forEach(thumb => {
-        thumb.classList.remove('active');
-    });
-    thumbnail.classList.add('active');
-}
-
-// ------------------------------------------------------------------
-// --- Event Listeners and Validation ---
-// ------------------------------------------------------------------
-// Login screen validation and App Script log (type: user_login)
-document.getElementById('continue-btn').addEventListener('click', async () => {
-    const nameInput = document.getElementById('name');
-    const phoneInput = document.getElementById('phone');
-    const phoneGroup = document.getElementById('phone-input-group');
-    let isValid = true;
-
-    nameInput.classList.remove('error');
-    phoneGroup.classList.remove('error');
-
-    if (nameInput.value.trim() === '') {
-        nameInput.classList.add('error');
-        isValid = false;
-    }
-
-    const phoneValue = phoneInput.value.trim();
-    if (phoneValue.length !== 10 || isNaN(phoneValue)) {
-        phoneGroup.classList.add('error');
-        isValid = false;
-    }
-
-    if (isValid) {
-        // 1. Prepare data for the App Script (type: user_login)
-        const loginData = {
-            type: 'user_login', 
-            name: nameInput.value.trim(),
-            phone: '+91 ' + phoneValue, 
-            language: currentLang 
-        };
-        
-        // 2. Send Data to Google Sheet (Async)
-        await sendDataToAppScript(loginData);
-        
-        // 3. Save details locally and navigate
-        localStorage.setItem('userName', nameInput.value.trim());
-        localStorage.setItem('userPhone', '+91 ' + phoneValue);
-        
-        // Correctly set the home screen as active in the nav bar
-        const homeNav = document.querySelector('.nav-item[data-target="home"]');
-        showScreen('home-screen', homeNav);
-    }
-});
-
-// Checkout screen validation and Payment Initiation (type: checkout)
-document.getElementById('pay-now-btn').addEventListener('click', async () => {
-    const addressInput = document.getElementById('full-address');
-    const pincodeInput = document.getElementById('pincode');
-    const addressError = document.getElementById('address-error');
-    const pincodeError = document.getElementById('pincode-error');
-    let isValid = true;
-
-    addressInput.classList.remove('error');
-    pincodeInput.classList.remove('error');
-    addressError.style.display = 'none';
-    pincodeError.style.display = 'none';
-
-    if (addressInput.value.trim() === '') {
-        addressInput.classList.add('error');
-        addressError.style.display = 'block';
-        isValid = false;
-    }
-
-    const pincodeValue = pincodeInput.value.trim();
-    if (pincodeValue.length !== 6 || isNaN(pincodeValue)) {
-        pincodeInput.classList.add('error');
-        pincodeError.style.display = 'block';
-        isValid = false;
-    }
-
-    if (isValid) {
-        // Data for App Script and Payment Notes
-        const fullName = document.getElementById('checkout-name').value.trim();
-        const phoneNumber = document.getElementById('checkout-phone').value.trim();
-        const address = addressInput.value.trim();
-        const pincode = pincodeInput.value.trim();
-        
-        // Format Payment Notes (bookcode|pincode|phonenumber|full name)
-        const paymentNote = `${cartDetails.bookCode}|${pincode}|${phoneNumber.replace('+91 ', '')}|${fullName.replace(/\s/g, ' ')}`;
-
-        // 1. Prepare data for App Script (type: checkout)
-        const checkoutData = {
-            type: 'checkout', 
-            fullName: fullName, 
-            phoneNumber: phoneNumber, 
-            address: address, 
-            pincode: pincode, 
-            bookCode: cartDetails.bookCode, 
-            total: cartDetails.total, 
-            paymentNote: paymentNote
-        };
-        
-        // 2. Save Checkout Data to Google Sheet (Async)
-        await sendDataToAppScript(checkoutData);
-
-        // 3. Initiate Actual UPI Payment Redirection
-        const VPA = TEST_UPI_VPA; // Use the VPA defined at the top
-        const MerchantNameEncoded = encodeURIComponent(MERCHANT_NAME);
-        const Amount = cartDetails.total.toFixed(2);
-        
-        // The paymentNote will be used as the transaction note (tn)
-        const TransactionNoteEncoded = encodeURIComponent(paymentNote); 
-        
-        // Construct the UPI Deeplink (Using date+time for Transaction ID (tid) and Transaction Reference (tr))
-        const timestamp = Date.now();
-        const upiLink = `upi://pay?pa=${VPA}&pn=${MerchantNameEncoded}&mc=5411&tid=${timestamp}&tr=${timestamp}&am=${Amount}&cu=INR&tn=${TransactionNoteEncoded}`;
-        
-        console.log("Redirecting to UPI:", upiLink);
-
-        // Execute the UPI redirect
-        window.location.href = upiLink;
-    } else {
-        if (addressInput.classList.contains('error')) {
-            addressInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else if (pincodeInput.classList.contains('error')) {
-             pincodeInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    }
-});
-
-// ------------------------------------------------------------------
-// --- Initialization ---
-// ------------------------------------------------------------------
+// Attach dark mode toggle to buttons on both pages
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // =======================================================
-    // FIX: Force all screens to display: none; to prevent stacking
-    // This overcomes aggressive CSS caching on mobile devices.
-    // =======================================================
-    document.querySelectorAll('.app-screen').forEach(screen => {
-        screen.style.display = 'none';
+    document.querySelectorAll('.dark-mode-toggle').forEach(button => {
+        button.addEventListener('click', toggleDarkMode);
     });
-    // =======================================================
-    
-    // Initial state setup
-    // Now call showScreen('login-screen') to explicitly set it to 'flex'
-    showScreen('login-screen');
-    updateCartBadge(); 
-    
-    // Language event listeners
-    document.getElementById('lang-en').addEventListener('click', () => updateLanguage('en'));
-    document.getElementById('lang-ml').addEventListener('click', () => updateLanguage('ml'));
-    updateLanguage('en'); 
-    
-    // Attach event listeners to all bottom nav items
-    document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
-        item.addEventListener('click', function() {
-            const target = this.getAttribute('data-target');
-            if (target) {
-                // target will be 'home', 'cart', or 'profile'
-                showScreen(target + '-screen', this);
-            }
-        });
-    });
-    
-    // Dark Mode Toggle
-    document.querySelectorAll('.dark-mode-toggle').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const body = document.body;
-            body.classList.toggle('dark-theme');
-            const icon = btn.textContent;
-            btn.textContent = icon === '🌙' ? '☀️' : '🌙';
-        });
-    });
+    updateCartCount();
 });
+
+
+// =================================================================
+// 2. MAIN APPLICATION LOGIC (Only runs when index.html is loaded)
+// =================================================================
+const pathname = window.location.pathname;
+
+if (pathname.includes('index.html') || pathname === '/') {
+    
+    // --- Index-Specific Functions ---
+    
+    function showScreen(targetId, navButton = null) {
+        const screens = document.querySelectorAll('.app-screen');
+        screens.forEach(screen => {
+            screen.style.display = 'none';
+        });
+        const targetScreen = document.getElementById(targetId + '-screen');
+        if (targetScreen) {
+            targetScreen.style.display = 'flex';
+        }
+        
+        // Update navigation bar active state
+        document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        if (navButton) {
+            navButton.classList.add('active');
+        } else if (['home', 'cart', 'profile'].includes(targetId)) {
+            // Find the button if navigated via code (e.g., from login)
+            const targetNav = document.querySelector(`.bottom-nav .nav-item[data-target="${targetId}"]`);
+            if (targetNav) targetNav.classList.add('active');
+        }
+        
+        // Ensure the back button is functional
+        if (targetId === 'home') {
+            document.querySelector('.bottom-nav .nav-item[data-target="home"]').classList.add('active');
+        }
+    }
+
+    function switchLanguage(lang) {
+        currentLanguage = lang;
+        localStorage.setItem('language', lang);
+        document.querySelectorAll('.lang-button').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`lang-${lang}`).classList.add('active');
+        // --- (Add full language translation logic here) ---
+    }
+
+    function loadInitialState() {
+        // Check for language preference
+        currentLanguage = localStorage.getItem('language') || 'ml';
+        switchLanguage(currentLanguage);
+
+        // Check for user login info
+        if (userInfo && userInfo.name && userInfo.phone) {
+            // If logged in, skip login screen
+            showScreen('home');
+        } else {
+            // If not logged in, show login screen
+            showScreen('login');
+        }
+    }
+
+    function handleContinueBtn() {
+        const nameInput = document.getElementById('name').value.trim();
+        const phoneInput = document.getElementById('phone').value.trim();
+
+        if (nameInput === "" || phoneInput.length !== 10) {
+            alert("ദയവായി സാധുവായ പേരും 10 അക്ക ഫോൺ നമ്പറും നൽകുക.");
+            return;
+        }
+
+        userInfo = { name: nameInput, phone: phoneInput };
+        localStorage.setItem('userInfo', JSON.stringify(userInfo));
+        showScreen('home');
+    }
+
+    function addToCart() {
+        // Placeholder logic for adding a book
+        const bookTitle = document.getElementById('detail-title').textContent.trim();
+        const bookPriceText = document.getElementById('detail-price').textContent.replace('₹', '').trim();
+        const bookPrice = parseFloat(bookPriceText);
+
+        const existingItem = cart.find(item => item.title === bookTitle);
+
+        if (existingItem) {
+            existingItem.quantity += 1;
+        } else {
+            cart.push({ title: bookTitle, price: bookPrice, quantity: 1 });
+        }
+        localStorage.setItem('cart', JSON.stringify(cart));
+        updateCartCount();
+        alert(`${bookTitle} കാർട്ടിലേക്ക് ചേർത്തു!`);
+    }
+
+    // --- Event Listeners for index.html ---
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // Load the initial state (Login or Home)
+        loadInitialState();
+        
+        // Language buttons
+        document.getElementById('lang-en').addEventListener('click', () => switchLanguage('en'));
+        document.getElementById('lang-ml').addEventListener('click', () => switchLanguage('ml'));
+        
+        // Continue button on Login screen
+        document.getElementById('continue-btn').addEventListener('click', handleContinueBtn);
+        
+        // The Checkout button handler in Cart screen is handled by the simple inline `onclick="location.href = 'checkout.html'"` in the HTML
+    });
+
+}
+
+// =================================================================
+// 3. CHECKOUT LOGIC (Only runs when checkout.html is loaded)
+// =================================================================
+else if (pathname.includes('checkout.html')) {
+
+    // --- Checkout-Specific Functions ---
+    
+    function showCheckoutScreen(id) {
+        document.getElementById('checkout-screen').style.display = 'none';
+        document.getElementById('thank-you-screen').style.display = 'none';
+        
+        const targetScreen = document.getElementById(id);
+        if (targetScreen) {
+            targetScreen.style.display = 'flex';
+        }
+    }
+
+    function loadCheckoutData() {
+        // Load User Info from local storage
+        const user = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        if (user.name && user.phone) {
+            document.getElementById('checkout-name').value = user.name;
+            document.getElementById('checkout-phone').value = user.phone;
+        } else {
+            // Handle error or redirect if user info is missing
+            alert("User data missing. Redirecting to home.");
+            location.href = 'index.html';
+            return;
+        }
+
+        // Load Cart Data from local storage
+        const currentCart = JSON.parse(localStorage.getItem('cart') || '[]');
+        if (currentCart.length === 0) {
+            alert("Cart is empty. Redirecting to cart page.");
+            location.href = 'index.html?screen=cart';
+            return;
+        }
+
+        // Simplified data display (assuming one item for now based on your HTML)
+        const item = currentCart[0]; // Get the first item
+        const totalPrice = currentCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        
+        document.getElementById('checkout-qty').textContent = item.quantity;
+        document.getElementById('checkout-price').textContent = `₹${item.price.toFixed(2)}`;
+        document.getElementById('checkout-total-price').textContent = `₹${totalPrice.toFixed(2)}`;
+    }
+
+    function handlePayNow() {
+        const address = document.getElementById('full-address').value.trim();
+        const pincode = document.getElementById('pincode').value.trim();
+        
+        let isValid = true;
+        
+        // Address validation
+        if (address.length < 10) {
+            document.getElementById('address-error').style.display = 'block';
+            isValid = false;
+        } else {
+            document.getElementById('address-error').style.display = 'none';
+        }
+
+        // Pincode validation
+        if (pincode.length !== 6 || isNaN(pincode)) {
+            document.getElementById('pincode-error').style.display = 'block';
+            isValid = false;
+        } else {
+            document.getElementById('pincode-error').style.display = 'none';
+        }
+
+        if (isValid) {
+            // --- ACTUAL PAYMENT PROCESSING LOGIC HERE ---
+            // Simulate successful payment
+            
+            // Clear cart after successful transaction
+            localStorage.removeItem('cart');
+            updateCartCount(); // Reset badge
+            
+            showCheckoutScreen('thank-you-screen');
+        }
+    }
+
+    // --- Event Listeners for checkout.html ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Set the default screen for this page
+        showCheckoutScreen('checkout-screen');
+        
+        // Load user and cart data
+        loadCheckoutData();
+
+        // Pay Now button
+        const payNowBtn = document.getElementById('pay-now-btn');
+        if (payNowBtn) {
+            payNowBtn.addEventListener('click', handlePayNow);
+        }
+        
+        // Back button on Thank You screen (to return to Checkout details)
+        const thankYouBackBtn = document.querySelector('#thank-you-screen .header-with-back .back-btn');
+        if (thankYouBackBtn) {
+            thankYouBackBtn.addEventListener('click', () => showCheckoutScreen('checkout-screen'));
+        }
+    });
+}
+// =================================================================

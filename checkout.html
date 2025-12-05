@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BooksByNIK App - Checkout</title>
+    <link rel="stylesheet" href="style.css?v=2150"> 
+</head>
+<body>
+<div class="app-container">
+    
+    <div id="checkout-screen" class="app-screen">
+        <div class="header-with-back">
+            <button class="back-btn" onclick="location.href = 'index.html?screen=cart'">←</button>
+            <h2 class="screen-title-ml">ചെക്ക്ഔട്ട്</h2>
+            <button class="dark-mode-toggle">🌙</button>
+        </div>
+        <div class="checkout-sections">
+            <section class="info-section">
+                <h3 class="section-title-ml">🧍 നിങ്ങളുടെ വിവരങ്ങൾ</h3>
+                <label class="input-label-ml">മുഴുവൻ പേര്</label>
+                <input type="text" id="checkout-name" value="" readonly>
+                
+                <label class="input-label-ml">ഫോൺ നമ്പർ</label>
+                <input type="tel" id="checkout-phone" value="" readonly>
+            </section>
+            <section class="info-section">
+                <h3 class="section-title-ml">🏠 ഡെലിവറി വിലാസം</h3>
+                <label class="input-label-ml">പൂർണ്ണ വിലാസം</label>
+                <textarea id="full-address" placeholder="വീട്/ഫ്ലാറ്റ് നമ്പർ, തെരുവ്, ഏരിയ, നഗരം, സംസ്ഥാനം"></textarea>
+                <p id="address-error">Please enter a complete address</p>
+                
+                <label class="input-label-ml">പിൻകോഡ്</label>
+                <input type="number" id="pincode" placeholder="6 അക്ക പിൻകോഡ്" maxlength="6" inputmode="numeric">
+                <p id="pincode-error">Enter a valid 6-digit pincode</p>
+            </section>
+            <section class="info-section">
+                <h3 class="section-title-ml">📦 ഓർഡർ സംഗ്രഹം</h3>
+                <div class="summary-line">
+                    <span>ഹൃദയത്തിന്റെ മന്ത്രണങ്ങൾ (എണ്ണം: <span id="checkout-qty">1</span>)</span>
+                    <span id="checkout-price">₹299</span>
+                </div>
+                <div class="summary-total">
+                    <span>ആകെ</span>
+                    <span id="checkout-total-price">₹299</span>
+                </div>
+            </section>
+        </div>
+        <div class="payment-footer">
+            <button class="pay-now-btn" id="pay-now-btn">
+                💳 ഇപ്പോൾ പണം നൽകുക
+            </button>
+            <p class="secure-payment-note">
+                🛡️ UPI വഴി സുരക്ഷിത പേയ്മെന്റ്
+            </p>
+        </div>
+    </div>
+    
+    <div id="thank-you-screen" class="app-screen" style="display: none;">
+        <div class="header-with-back">
+            <h2 class="screen-title-ml">ഓർഡർ വിശദാംശങ്ങൾ</h2>
+            <button class="dark-mode-toggle">🌙</button>
+        </div>
+        
+        <div class="thank-you-content">
+            <div class="success-icon">✅</div>
+            <h1 class="thank-you-title">നന്ദി!</h1>
+            <p class="thank-you-message">നിങ്ങളുടെ ഓർഡർ വിജയകരമായി സമർപ്പിച്ചു</p>
+            <div class="info-section">
+                <h3 class="section-title-ml">ഓർഡർ നമ്പർ</h3>
+                <p class="order-number">ORD-1764923956267</p>
+                <p class="order-date">⏲️ 2025, ഡിസംബർ 5 02:09 PM</p>
+            </div>
+            
+            <button class="continue-button" onclick="location.href = 'index.html?screen=home'">
+                കൂടുതൽ പുസ്തകങ്ങൾ ബ്രൗസ് ചെയ്യുക
+            </button>
+        </div>
+    </div>
+    
+    <nav class="bottom-nav">
+        <button class="nav-item" data-target="home" onclick="location.href = 'index.html?screen=home'">
+            <span class="icon">🏠</span>
+            <span data-ml="ഹോം">ഹോം</span>
+        </button>
+        <button class="nav-item" data-target="cart" onclick="location.href = 'index.html?screen=cart'">
+            <span class="icon">🛒</span>
+            <span class="cart-badge" id="cart-count">0</span>
+            <span data-ml="കാർട്ട്">കാർട്ട്</span>
+        </button>
+        <button class="nav-item" data-target="profile" onclick="location.href = 'index.html?screen=profile'">
+            <span class="icon">👤</span>
+            <span data-ml="പ്രൊഫൈൽ">പ്രൊഫൈൽ</span>
+        </button>
+    </nav>
+</div>
+<script src="script.js"></script> </body>
+</html>
