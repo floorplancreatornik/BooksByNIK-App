@@ -73,31 +73,6 @@
             <h2 class="screen-title-ml">പുസ്തക വിഭാഗങ്ങൾ</h2>
             <button class="dark-mode-toggle">🌙</button>
         </div>
-        <div class="book-details-content">
-            <div class="main-cover-area">
-                <img src="images/placeholder-main.png" alt="Main Book Cover" id="main-book-cover" class="main-book-cover">
-            </div>
-            
-            <div class="preview-thumbnails">
-                <img src="images/placeholder-c1.png" data-full-src="images/placeholder-main.png" class="thumbnail active" onclick="swapImage(this)">
-                <img src="images/placeholder-p1.png" data-full-src="images/placeholder-preview1.png" class="thumbnail" onclick="swapImage(this)">
-                <img src="images/placeholder-p2.png" data-full-src="images/placeholder-preview2.png" class="thumbnail" onclick="swapImage(this)">
-            </div>
-            <div class="book-metadata">
-                <h1 class="book-title-ml" id="detail-title">ഹൃദയത്തിന്റെ മന്ത്രണങ്ങൾ</h1>
-                <p class="author-tag">രചന NIK</p>
-                <span class="category-tag" id="detail-category">Poetry</span>
-                <div class="price-row">
-                    <span class="price-large" id="detail-price">₹299</span>
-                    <span class="format-small">(Paperback)</span>
-                </div>
-            </div>
-            <div class="description-box">
-                <p class="description-text-ml">
-                    മനുഷ്യ വികാരങ്ങളുടേയും... (Description placeholder)
-                </p>
-            </div>
-        </div>
         <div class="bottom-actions-bar">
             <button class="buy-now-btn" onclick="buyNow()">ഇപ്പോൾ വാങ്ങുക</button>
             <button class="add-to-cart-btn" id="add-to-cart-btn" onclick="addToCart()">
@@ -112,49 +87,13 @@
             <h2 class="screen-title-ml">നിങ്ങളുടെ കാർട്ട്</h2>
             <button class="dark-mode-toggle">🌙</button>
         </div>
-        <div id="cart-content">
-            <div id="cart-filled-state">
-                <div class="cart-item-card">
-                    <img src="images/placeholder-cart.png" alt="Book Cover">
-                    <div>
-                         <div>ഹൃദയത്തിന്റെ മന്ത്രണങ്ങൾ</div>
-                         <div>രചന NIK</div>
-                         <div>₹299</div>
-                    </div>
-                    <div class="quantity-control-row">
-                        <span>എണ്ണം:</span>
-                        <div class="quantity-selector">
-                            <button class="qty-btn" onclick="updateQty(-1)">-</button>
-                            <span class="qty-count" id="item-quantity">1</span>
-                            <button class="qty-btn" onclick="updateQty(1)">+</button>
-                        </div>
-                        <button class="remove-btn" onclick="removeFromCart()">🗑️ നീക്കം ചെയ്യുക</button>
-                    </div>
-                </div>
-                <div class="total-summary-box">
-                    <div class="summary-row">
-                        <span class="summary-label">ആകെ തുക</span>
-                        <span class="summary-amount" id="total-amount">₹299</span>
-                    </div>
-                </div>
-                <div class="cart-actions">
-                    <button class="checkout-btn continue-button" onclick="location.href = 'checkout.html'">
-                        🛒 ചെക്ക്ഔട്ടിലേക്ക് പോകുക
-                    </button>
-                    <button class="continue-shopping-btn add-to-cart-btn" onclick="showScreen('home')">
-                        ഷോപ്പിംഗ് തുടരുക
-                    </button>
-                </div>
-            </div>
-            <div id="cart-empty-state">
-                <div class="empty-state">
-                    <div class="empty-cart-icon">🛒</div>
-                    <p class="empty-message-ml">നിങ്ങളുടെ കാർട്ട് ശൂന്യമാണ്: ഞങ്ങളുടെ ശേഖരം പരിശോധിക്കുക!</p>
-                    <button class="continue-button" onclick="showScreen('home')">
-                         പുസ്തകങ്ങൾ ബ്രൗസ് ചെയ്യുക
-                    </button>
-                </div>
-            </div>
+        <div class="cart-actions">
+            <button class="checkout-btn continue-button" onclick="location.href = 'checkout.html'">
+                🛒 ചെക്ക്ഔട്ടിലേക്ക് പോകുക
+            </button>
+            <button class="continue-shopping-btn add-to-cart-btn" onclick="showScreen('home')">
+                ഷോപ്പിംഗ് തുടരുക
+            </button>
         </div>
     </div>
     
@@ -168,7 +107,7 @@
              </div>
     </div>
     
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" id="main-bottom-nav" style="display: none;">
         <button class="nav-item active" data-target="home" onclick="showScreen('home', this)">
             <span class="icon">🏠</span>
             <span data-ml="ഹോം">ഹോം</span>
@@ -184,5 +123,6 @@
         </button>
     </nav>
 </div>
-<script src="script.js"></script> </body>
+<script src="script.js"></script>
+</body>
 </html>
