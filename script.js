@@ -4,6 +4,13 @@
 const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxfutlqgo1z76Upfct07p6brPJEfYZUiNii7T445cIu6mavWHG7T9cltAvTPLqTOt6eyQ/exec";
 
 // =========================================================
+// 2. UPI TEST CONFIGURATION (REPLACE FOR PRODUCTION)
+// =========================================================
+const TEST_UPI_VPA = 'test@ybl'; // <<< Replace with your actual UPI VPA (e.g., yourname@okicici)
+const MERCHANT_NAME = 'BooksByNIK';
+
+
+// =========================================================
 let currentLang = 'en';
 
 let cartItemCount = 0;
@@ -55,7 +62,7 @@ async function sendDataToAppScript(data) {
     }
 }
 // ------------------------------------------------------------------
-// --- Core Navigation and UI Functions (FIXED showScreen below) ---
+// --- Core Navigation and UI Functions ---
 // ------------------------------------------------------------------
 function showScreen(screenId, navElement = null) {
     document.querySelectorAll('.app-screen').forEach(screen => {
@@ -173,7 +180,6 @@ function updateCartScreen() {
     const emptyState = document.getElementById('cart-empty-state');
     const filledState = document.getElementById('cart-filled-state'); 
     
-    // NOTE: If cart is still blank, these IDs in index.html may need verification.
     if (cartDetails.quantity > 0) {
         // Update filled cart details
         document.getElementById('item-quantity').textContent = cartDetails.quantity;
@@ -208,7 +214,7 @@ function prefillCheckout() {
 }
 
 // ------------------------------------------------------------------
-// --- Missing Functions for Book Details Screen (Restored) ---
+// --- Book Details Screen Functions ---
 // ------------------------------------------------------------------
 
 function showBookDetails(title, price, category, bookCode) {
@@ -345,10 +351,25 @@ document.getElementById('pay-now-btn').addEventListener('click', async () => {
         // 2. Save Checkout Data to Google Sheet (Async)
         await sendDataToAppScript(checkoutData);
 
-        // 3. Simulate Payment Gateway Redirect and navigate
-        console.log(`Simulating UPI redirect with Notes: ${paymentNote}`);
+        // 3. Initiate Actual UPI Payment Redirection (FIXED: Redirect instead of just showing Thank You)
+        const VPA = TEST_UPI_VPA; // Use the VPA defined at the top
+        const MerchantNameEncoded = encodeURIComponent(MERCHANT_NAME);
+        const Amount = cartDetails.total.toFixed(2);
         
-        showScreen('thank-you-screen');
+        // The paymentNote will be used as the transaction note (tn)
+        const TransactionNoteEncoded = encodeURIComponent(paymentNote); 
+        
+        // Construct the UPI Deeplink (Using date+time for Transaction ID (tid) and Transaction Reference (tr))
+        const timestamp = Date.now();
+        const upiLink = `upi://pay?pa=${VPA}&pn=${MerchantNameEncoded}&mc=5411&tid=${timestamp}&tr=${timestamp}&am=${Amount}&cu=INR&tn=${TransactionNoteEncoded}`;
+        
+        console.log("Redirecting to UPI:", upiLink);
+
+        // Execute the UPI redirect
+        window.location.href = upiLink;
+        
+        // NOTE: The user is now leaving the app. The 'thank-you-screen' 
+        // will not be visible unless they return successfully or we manually navigate later.
     } else {
         if (addressInput.classList.contains('error')) {
             addressInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -376,4 +397,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('lang-en').addEventListener('click', () => updateLanguage('en'));
     document.getElementById('lang-ml').addEventListener('click', () => updateLanguage('ml'));
     updateLanguage('en'); 
+
+    // FIX APPLIED HERE: Attach event listeners to all bottom nav items
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const target = this.getAttribute('data-target');
+            if (target) {
+                // target will be 'home', 'cart', or 'profile'
+                // This fixes the Profile button not working
+                showScreen(target + '-screen', this);
+            }
+        });
+    });
 });
