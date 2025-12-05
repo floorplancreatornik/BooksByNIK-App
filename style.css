@@ -34,7 +34,7 @@ body {
     position: relative;
     background: white;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    /* <<< CRITICAL: Set app-container to flex column for full height app layout >>> */
+    /* CRITICAL FIX: Set app-container to flex column for full height app layout */
     display: flex;
     flex-direction: column;
     height: 100vh;
@@ -43,14 +43,16 @@ body.dark-theme .app-container {
     background: #121212;
 }
 .app-screen {
-    /* padding-bottom: 70px; - REMOVED PADDING HERE, IT WAS CAUSING SCROLLING ISSUES */
+    /* Set min-height to allow content to push */
     min-height: 100vh;
-    overflow-y: hidden; /* Prevent double scrollbar */
+    overflow-y: hidden; 
     background-color: var(--light-bg);
+    /* CRITICAL: Must be initially set to none in JS/HTML but defined here for proper layout */
     display: none; 
-    /* <<< CRITICAL: Allow screen to take up remaining vertical space >>> */
+    /* CRITICAL FIX: Allow screen to take up remaining vertical space */
     flex-grow: 1;
-    display: flex !important; /* Override JS setting for proper layout flow */
+    /* Use flex for internal layout flow */
+    display: flex !important; 
     flex-direction: column; 
 }
 /* --- Shared Elements --- */
@@ -132,7 +134,6 @@ body.dark-theme .add-to-cart-btn { border-color: #444; }
 #login-screen {
     display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
     background-color: white;
-    /* <<< CRITICAL: Allow login content to scroll if necessary >>> */
     min-height: 100%;
     overflow-y: auto;
 }
@@ -152,7 +153,7 @@ body.dark-theme .book-card { background: #2c2c2c; }
 .book-cover { width: 100%; height: auto; border-radius: 8px; margin-bottom: 10px; }
 .price-tag { position: absolute; top: 25px; right: 25px; background-color: var(--light-bg); color: var(--primary-color); padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 0.9em; z-index: 10; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
 /* --- Details & Actions --- */
-/* <<< CRITICAL: Scrollable content wrappers with padding for fixed footers >>> */
+/* CRITICAL: Scrollable content wrappers with padding for fixed footers */
 .book-details-content,
 #cart-content {
     flex-grow: 1;
@@ -179,7 +180,7 @@ body.dark-theme .preview-thumbnails { background-color: #2c2c2c;}
 .thumbnail.active { border-color: var(--primary-color); }
 .book-metadata, .description-box { background-color: white; padding: 20px; margin-bottom: 10px; }
 body.dark-theme .book-metadata, body.dark-theme .description-box { background-color: #2c2c2c; }
-/* <<< CRITICAL: Aligned and formatted fixed action bars >>> */
+/* CRITICAL: Aligned and formatted fixed action bars */
 .bottom-actions-bar, .payment-footer { 
     position: fixed; 
     bottom: 60px; /* Position above the bottom nav bar */
@@ -205,15 +206,13 @@ body.dark-theme .book-metadata, body.dark-theme .description-box { background-co
     margin-right: 10px;
 }
 .payment-footer {
-    /* Only minor fix here: ensure text sits correctly with the button */
+    /* Stack text and button vertically */
     flex-direction: column;
     align-items: flex-start;
 }
-
 .payment-footer .pay-now-btn {
     margin-top: 0;
 }
-
 body.dark-theme .bottom-actions-bar, body.dark-theme .payment-footer { 
     background-color: #2c2c2c; box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
 }
